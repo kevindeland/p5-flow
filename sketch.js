@@ -57,7 +57,7 @@ function setup() {
   top_y = int(CH * -0.5)
   bottom_y = int(CH * 1.5)
   
-  resolution = int(CW * 0.02)
+  resolution = int(CW * 0.01)
   
   num_columns = (right_x - left_x) / resolution
   num_rows = (bottom_y - top_y) / resolution
@@ -66,18 +66,44 @@ function setup() {
 
   let default_angle = QUARTER_PI
   
+  const VectorFunctions = {
+    
+    'noise1': function(col, row) {
+      noiseDetail(10, 0.4)
+      scaled_x = col * 0.005
+      scaled_y = row * 0.005
+      noise_val = noise(scaled_x, scaled_y)
+      let angle = map(noise_val, 0.0, 1.0, 0.0, TWO_PI)
+      return angle
+    },
+
+    'noise_concrete': function(col, row) {
+      noiseDetail(10, 0.8)
+      scaled_x = col * 0.005
+      scaled_y = row * 0.005
+      noise_val = noise(scaled_x, scaled_y)
+      const STEPS = 4
+      let concrete = int(map(noise_val, 0.0, 1.0, 0.0, STEPS))
+
+      return concrete / STEPS * TWO_PI
+    },
+
+    'total_random': function(col, row) {
+      return random(TWO_PI)
+    },
+
+    'test': function(col, row) {
+      return map(col, 0, num_columns, 0, TWO_PI)
+    }
+  }
   // INITIALIZE GRID
-  noiseDetail(8, 0.65)
   count(0, num_columns).forEach(function(col) {
     let xc = []
     count(0, num_rows).forEach(function(row) {
 
       /* let angle = (row / float(num_rows)) * PI */
 
-      scaled_x = col * 0.005
-      scaled_y = row * 0.005
-      noise_val = noise(scaled_x, scaled_y)
-      let angle = map(noise_val, 0.0, 1.0, 0.0, TWO_PI)
+      let angle = VectorFunctions['noise1'](col,row)
       xc.push(angle)
     })
     gr.push(xc)
@@ -94,36 +120,53 @@ function setup() {
 
   const Pattern = PatternBank['stripes']
 
+  const StartPointFunctions = {
+    'grid': function() {
+      let xs = count(-10, 30).map(function(n) { return n*50 })
+      let ys = count(-10, 30).map(function(n) { return n*50 })
+    
+      let cs = count(-10, 30).map(function(n) { 
+        // console.log(n)
+        let index = (n+10)%Pattern.length
+        // console.log(index)
+        return Pattern[index]
+      })
 
-  // starting point
-  let x = 500;
-  let y = 100;
+      return {xs, ys, cs}
+    },
 
-  let xs = count(-5, 15).map(function(n) { return n*100 })
-  let ys = count(-5, 15).map(function(n) { return n*100 })
+    'grid2': function() {
+      const res = 25
+      const x1 = -20;
+      const x2 = 60;
+      let xs = count(x1, x2).map(function(n) { return n*res })
+      let ys = count(x1, x2).map(function(n) { return n*res })
+    
+      let cs = count(x1, x2).map(function(n) { 
+        // console.log(n)
+        let index = (n-x1)%Pattern.length
+        // console.log(index)
+        return Pattern[index]
+      })
 
-  let colors = xs.map(function(x) {
-    switch(500%x) {
-      case 0:
-        'ylw'
+      return {xs, ys, cs}
     }
-  })
 
-  let cs = count(-5, 15).map(function(n) { 
-    // console.log(n)
-    let index = (n+5)%Pattern.length
-    // console.log(index)
-    return Pattern[index]
-  })
-  console.log(cs)
+  }
+
+  const paths = StartPointFunctions['grid2']()
+  
+  const xs = paths.xs
+  const ys = paths.ys
+  const cs = paths.cs
 
   count(0, xs.length).forEach(function(i) {
     let x_start = xs[i]
     console.log('x_start')
     console.log(x_start)
     ys.forEach(function(y_start) {
-      let num_steps = 80;
-      let step_length = 10;
+      let num_steps = 10;
+      let step_length = 20;
 
       let x_draw = x_start
       let y_draw = y_start
@@ -132,10 +175,7 @@ function setup() {
       beginShape()
       noFill()
       count(0, num_steps).forEach(function(n) {
-        strokeWeight(8)
-        // console.log('i')
-        // console.log(i)
-        // console.log(cs[i])
+        strokeWeight(4)
         stroke(ColorPalette[cs[i]])
         // fill('blue')
         // circle(x_draw, y_draw, 5)
