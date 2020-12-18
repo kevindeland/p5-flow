@@ -1,25 +1,5 @@
 let CW, CH
 
-// *****************************
-// ******* Color Palette *******
-// *****************************
-
-// For defining colors
-
-let ColorPalette, HUE_MAX;
-
-InitColors = function() {
-
-  ColorPalette = {
-    'ylw': color( 2, 8, 16),
-    'grn': color( 6, 8, 12),
-    'red': color( 0, 8, 14),
-    'bl1': color( 9, 8, 14),
-    'bl2': color(10, 8, 10),
-  }
-}
-// *****************************
-
 
 // *****************************
 // ******* Field Creator *******
@@ -28,7 +8,7 @@ InitColors = function() {
 let VectorFields, StartingPoints;
 
 InitVectorFields = function() {
-    
+
   VectorFields = {
     'noise1': function(col, row) {
       noiseDetail(10, 0.4)
@@ -105,30 +85,54 @@ InitVectorFields = function() {
   }
 }
 
-
-
 // *****************************
-// ******* Pattern Bank ********
+// ******* CanvasDrawer ********
 // *****************************
 
-// For defining patterns
+// interacts directly w/ canvas
 
-let PatternBank;
+let drawPathThroughField, drawFlowLine;
 
-InitPatternBank = function() {
+InitCanvasDrawer = function() {
+
+  drawPathThroughField = function(NUM_STEPS, STEP_LENGTH, x_draw, y_draw, col) {
+    beginShape()
+    noFill()
+    strokeWeight(4)
+    stroke(col)
+
+    for (n of count(0, NUM_STEPS)) {
+
+      vertex(x_draw, y_draw)
   
-  PatternBank = {
-    'stripes': [
-      'ylw',
-      'bl2',
-      'bl1',
-      'grn',
-      'bl2',
-      'bl1',
-      'red',
-    ]
+      const x_offset = x_draw - left_x
+      const y_offset = y_draw - top_y
+  
+      const column_index = int(x_offset / resolution)
+      const row_index = int(y_offset / resolution)
+  
+      // check bounds
+      if (column_index >= num_columns || column_index < 0 || 
+        row_index < 0 || row_index >= num_rows) return;
+
+      const grid_angle = grid[column_index][row_index]
+  
+      const x_step = STEP_LENGTH * cos(grid_angle)
+      const y_step = STEP_LENGTH * sin(grid_angle)
+  
+      x_draw = x_draw + x_step
+      y_draw = y_draw + y_step
+    }
+    endShape()
+  }
+
+  drawFlowLine = function(x, y, theta) {
+    let r = 10
+    circle(x, y, r/2)
+    line(x, y, x+r*cos(theta), y+r*sin(theta))
   }
 }
+
 
 // Boundaries
 let left_x, right_x, top_y, bottom_y;
@@ -149,6 +153,7 @@ function setup() {
   InitPatternBank()
 
   InitVectorFields()
+  InitCanvasDrawer()
   
   // Extend Flow past the edges
   left_x = int(CW * -0.5)
@@ -166,87 +171,53 @@ function setup() {
   let default_angle = QUARTER_PI
   
   // INITIALIZE GRID
-  count(0, num_columns).forEach(function(col) {
+  for (col of count(0, num_columns)) {
     let xc = []
-    count(0, num_rows).forEach(function(row) {
+    for (row of count(0, num_rows)) {
 
       /* let angle = (row / float(num_rows)) * PI */
 
       let angle = VectorFields['noise_concrete'](col,row)
       xc.push(angle)
-    })
+    }
     grid.push(xc)
-  })
+  }
 
   // DRAW ANGLES
-  count(0, num_columns).forEach(function(col) {
-    count(0, num_rows).forEach(function(row) {
+  for (col of count(0, num_columns)) {
+    for (row of count(0, num_rows)) {
       let angle = grid[col][row]
 
       // drawFlowLine(left_x + col*resolution, top_y + row*resolution, angle)
-    })
-  })
+    }
+  }
 
   MainPattern = PatternBank['stripes']
 
   const paths = StartingPoints['grid2']()
 
+
+  // EXTRACT: not sure where these go.
+  const NUM_STEPS = 10;
+  const STEP_LENGTH = 20;
   
   const xs = paths.xs
   const ys = paths.ys
   const cs = paths.cs
-  console.log(cs)
 
-  count(0, xs.length).forEach(function(i) {
+  for (i of count(0, xs.length)) {
     let x_start = xs[i]
     
-    ys.forEach(function(y_start) {
-      let num_steps = 10;
-      let step_length = 20;
+    for (j of count(0, ys.length)) {
+      let y_start = ys[j]
 
-      let x_draw = x_start
-      let y_draw = y_start
-
-      beginShape()
-      noFill()
-      count(0, num_steps).forEach(function(n) {
-        strokeWeight(4)
-
-        stroke(ColorPalette[cs[i]])
-
-        vertex(x_draw, y_draw)
-    
-        x_offset = x_draw - left_x
-        y_offset = y_draw - top_y
-    
-        column_index = int(x_offset / resolution)
-        row_index = int(y_offset / resolution)
-    
-        // check bounds
-        if (column_index >= num_columns || column_index < 0 || 
-          row_index < 0 || row_index >= num_rows) return;
-        grid_angle = grid[column_index][row_index]
-    
-        x_step = step_length * cos(grid_angle)
-        y_step = step_length * sin(grid_angle)
-    
-        x_draw = x_draw + x_step
-        y_draw = y_draw + y_step
-      })
-      endShape()
-    })
-  })
+      let col = ColorPalette[cs[i]]
+      drawPathThroughField(NUM_STEPS, STEP_LENGTH, x_start, y_start, col)
+    }
+  }
 }
 
 function draw() {
   
 }
 
-
-
-function drawFlowLine(x, y, theta) {
-
-  let r = 10
-  circle(x, y, r/2)
-  line(x, y, x+r*cos(theta), y+r*sin(theta))
-}
